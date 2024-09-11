@@ -68,12 +68,12 @@ Options:
 ### Human Phenotype Ontology
 
 Click on the image!
-[![HPO](data/graph/onto_image.png)](https://ouestware.gitlab.io/retina/beta/#/graph/?url=https%3A%2F%2Fraw.githubusercontent.com%2Fkyauy%2FPhenoGenius%2Fmain%2Fdata%2Fgraph%2Fontology.gexf&r=v&n=n3453&sa=r&ca=f&st[]=n&st[]=f)
+[![HPO](data/graph/onto_image.png)](https://ouestware.gitlab.io/retina/1.0.0-beta.1/#/graph/?url=https%3A%2F%2Fraw.githubusercontent.com%2Fkyauy%2FPhenoGeniusCli%2Fmain%2Fdata%2Fgraph%2Fontology.gexf&sa=r&ca=f)
 
 ### Groups of interacting symptoms
 
 Click on the image!
-[![Groups](data/graph/group_image.png)](https://ouestware.gitlab.io/retina/beta/#/graph/?url=https%3A%2F%2Fraw.githubusercontent.com%2Fkyauy%2FPhenoGenius%2Fmain%2Fdata%2Fgraph%2F390groups.gexf&r=v&n=n16738&sa=r&ca[]=f&ca[]=l&st=f&ls=5oGenius%2Fmain%2Fdata%2Fgraph%2Fontology.gexf&r=v&n=n3453&sa=r&ca=f&st[]=n&st[]=f)
+[![Groups](data/graph/group_image.png)](https://ouestware.gitlab.io/retina/beta/#/graph/?url=https%3A%2F%2Fraw.githubusercontent.com%2Fkyauy%2FPhenoGeniusCli%2Fmain%2Fdata%2Fgraph%2F390groups.gexf&sa=r&ca[]=f&ca[]=l)
 
 Enjoy !
 

@@ -2,6 +2,8 @@ import numpy as np
 import pandas as pd
 import ujson as json
 import pickle as pk
+import pronto
+import copy
 from pandarallel import pandarallel
 import click
 import logging
@@ -32,6 +34,49 @@ def load_data():
         engine="pyarrow",
     )
     return matrix
+
+
+def load_obo():
+    """
+    Load the HPO ontology
+    """
+    graph = pronto.Ontology("data/resources/hp_2024.obo")
+    return graph
+
+
+def get_updated_hpo_term_list(hpo_list, obo_loaded):
+    """
+    Get a list with updated terms (as some HPO terms could become obsolete and be replaced)
+    """
+    hpo_2_list_updated = []
+    try:
+        for term in hpo_list:
+            if term == "HP:0000000":
+                pass
+            elif obo_loaded[term].obsolete:
+                # if term is obsolete, first get the replace_by term
+                if len(obo_loaded[term].replaced_by) != 1:
+                    # if no replace_by terms is declared, get the consider term
+                    if len(obo_loaded[term].consider) == 1:
+                        term_deepcopy = copy.deepcopy(obo_loaded[term].consider)
+                        term_updated = term_deepcopy.pop().id
+                    else:
+                        # if no consider terms is reported, go check if this term is an alternate id of one HPO in ontology
+                        for hpo in obo_loaded.terms():
+                            if term in hpo.alternate_ids:
+                                term_updated = hpo.id
+                                hpo_2_list_updated.append(term_updated)
+                else:
+                    term_deepcopy = copy.deepcopy(obo_loaded[term].replaced_by)
+                    term_updated = term_deepcopy.pop().id
+                    hpo_2_list_updated.append(term_updated)
+                print(f"{term} is obsolete, replaced by {term_updated}")
+            else:
+                hpo_2_list_updated.append(term)
+    except:
+        print(hpo_list)
+
+    return hpo_2_list_updated
 
 
 def load_nmf_model():
@@ -168,14 +213,16 @@ def evaluate_matching(result_file, hpo_list, gene_list):
     ncbi, symbol = symbol_to_id_to_dict()
     data = load_data()
     hp_onto = load_hp_ontology()
+    obo_loaded = load_obo()
 
     logging.info("INFO: clean HPO list")
     if hpo_list is None:
         print("Provide a list of HPO terms with the --hpo_list option")
     else:
         hpo_list_ini = hpo_list.strip().split(",")
+        hpo_list_updated = get_updated_hpo_term_list(hpo_list_ini, obo_loaded)
         hpo_list_up = []
-        for hpo in hpo_list_ini:
+        for hpo in hpo_list_updated:
             if hpo in ["HP:0000001"]:
                 pass
             else:

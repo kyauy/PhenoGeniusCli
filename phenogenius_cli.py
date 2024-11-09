@@ -99,7 +99,7 @@ def symbol_to_id_to_dict():
 
 
 def load_similarity_dict():
-    with open("data/resources/similarity_dict_threshold_80.json") as json_data:
+    with open("data/resources/similarity_dict_threshold_80_2024.json") as json_data:
         data_dict = json.load(json_data)
     return data_dict
 

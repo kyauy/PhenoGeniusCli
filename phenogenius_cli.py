@@ -301,7 +301,10 @@ def evaluate_matching(result_file, hpo_list, gene_list):
         else:
             logging.info("INFO: selected symptom interaction model - node similarity")
             similarity_terms_dict = load_similarity_dict()
-            sim_dict, hpo_list_add = get_similar_terms(hpo_list, similarity_terms_dict)
+            sim_dict, hpo_list_add_raw = get_similar_terms(
+                hpo_list, similarity_terms_dict
+            )
+            hpo_list_add = list(set(hpo_list_add_raw) & set(data.columns.tolist()))
             results_sum_add = score_sim_add(hpo_list_add, data, sim_dict, symbol)
             results_sum_add["rank"] = (
                 results_sum_add["sum"].rank(ascending=False, method="max").astype(int)

@@ -9,25 +9,31 @@ import click
 import logging
 import subprocess
 import warnings
+import os
+from importlib import metadata
 
 warnings.filterwarnings("ignore")
+
+PACKAGE_DIR_PATH = os.path.dirname(__file__)
+RESOURCE_DIR_PATH = os.path.join(PACKAGE_DIR_PATH, 'data', 'resources')
 
 
 def get_version_from_git_tag():
     try:
+        os.chdir(PACKAGE_DIR_PATH)
         version = (
             subprocess.check_output(["git", "describe", "--tags"])
             .strip()
             .decode("utf-8")
         )
     except Exception:
-        version = "Unknown"
+        version = metadata.version("phenogenius_cli")
     return version
 
 
 def load_data():
     matrix = pd.read_csv(
-        "data/resources/ohe_all_thesaurus_weighted_2024.tsv.gz",
+        f"{RESOURCE_DIR_PATH}/ohe_all_thesaurus_weighted_2024.tsv.gz",
         sep="\t",
         compression="gzip",
         index_col=0,
@@ -40,7 +46,7 @@ def load_obo():
     """
     Load the HPO ontology
     """
-    graph = pronto.Ontology("data/resources/hp_2024.obo")
+    graph = pronto.Ontology(f"{RESOURCE_DIR_PATH}/hp_2024.obo")
     return graph
 
 
@@ -80,16 +86,16 @@ def get_updated_hpo_term_list(hpo_list, obo_loaded):
 
 
 def load_nmf_model():
-    with open("data/resources/pheno_NMF_390_model_42_2024.pkl", "rb") as pickle_file:
+    with open(f"{RESOURCE_DIR_PATH}/pheno_NMF_390_model_42_2024.pkl", "rb") as pickle_file:
         pheno_NMF = pk.load(pickle_file)
-    with open("data/resources/pheno_NMF_390_matrix_42_2024.pkl", "rb") as pickle_file:
+    with open(f"{RESOURCE_DIR_PATH}/pheno_NMF_390_matrix_42_2024.pkl", "rb") as pickle_file:
         reduced = pk.load(pickle_file)
     return pheno_NMF, reduced
 
 
 def symbol_to_id_to_dict():
     # from NCBI
-    ncbi_df = pd.read_csv("data/resources/Homo_sapiens.gene_info.gz", sep="\t")
+    ncbi_df = pd.read_csv(f"{RESOURCE_DIR_PATH}/Homo_sapiens.gene_info.gz", sep="\t")
     ncbi_df = ncbi_df[ncbi_df["#tax_id"] == 9606]
     ncbi_df_ncbi = ncbi_df.set_index("Symbol")
     ncbi_to_dict_ncbi = ncbi_df_ncbi["GeneID"].to_dict()
@@ -99,13 +105,13 @@ def symbol_to_id_to_dict():
 
 
 def load_similarity_dict():
-    with open("data/resources/similarity_dict_threshold_80_2024.json") as json_data:
+    with open(f"{RESOURCE_DIR_PATH}/similarity_dict_threshold_80_2024.json") as json_data:
         data_dict = json.load(json_data)
     return data_dict
 
 
 def load_hp_ontology():
-    with open("data/resources/hpo_obo_2024.json") as json_data:
+    with open(f"{RESOURCE_DIR_PATH}/hpo_obo_2024.json") as json_data:
         data_dict = json.load(json_data)
     return data_dict
 

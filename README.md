@@ -46,6 +46,9 @@ Options:
                       commas
   --gene_list TEXT    (Optional) List of genes in NCBI ID format to match,
                       separated with commas
+  --resource_dir TEXT  (Optional) Path to resources directory, default =
+                       data/resources/
+  --help               Show this message and exit.
 ```
 
 | Field                         | Description                                                                                                               |

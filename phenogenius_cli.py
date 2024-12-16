@@ -15,7 +15,7 @@ from importlib import metadata
 warnings.filterwarnings("ignore")
 
 PACKAGE_DIR_PATH = os.path.dirname(__file__)
-RESOURCE_DIR_PATH = os.path.join(PACKAGE_DIR_PATH, 'data', 'resources')
+# RESOURCE_DIR_PATH = os.path.join(PACKAGE_DIR_PATH, 'data', 'resources')
 
 
 def get_version_from_git_tag():
@@ -31,9 +31,9 @@ def get_version_from_git_tag():
     return version
 
 
-def load_data():
+def load_data(resource_dir):
     matrix = pd.read_csv(
-        f"{RESOURCE_DIR_PATH}/ohe_all_thesaurus_weighted_2024.tsv.gz",
+        f"{resource_dir}/ohe_all_thesaurus_weighted_2024.tsv.gz",
         sep="\t",
         compression="gzip",
         index_col=0,
@@ -42,11 +42,11 @@ def load_data():
     return matrix
 
 
-def load_obo():
+def load_obo(resource_dir):
     """
     Load the HPO ontology
     """
-    graph = pronto.Ontology(f"{RESOURCE_DIR_PATH}/hp_2024.obo")
+    graph = pronto.Ontology(f"{resource_dir}/hp_2024.obo")
     return graph
 
 
@@ -85,17 +85,17 @@ def get_updated_hpo_term_list(hpo_list, obo_loaded):
     return hpo_2_list_updated
 
 
-def load_nmf_model():
-    with open(f"{RESOURCE_DIR_PATH}/pheno_NMF_390_model_42_2024.pkl", "rb") as pickle_file:
+def load_nmf_model(resource_dir):
+    with open(f"{resource_dir}/pheno_NMF_390_model_42_2024.pkl", "rb") as pickle_file:
         pheno_NMF = pk.load(pickle_file)
-    with open(f"{RESOURCE_DIR_PATH}/pheno_NMF_390_matrix_42_2024.pkl", "rb") as pickle_file:
+    with open(f"{resource_dir}/pheno_NMF_390_matrix_42_2024.pkl", "rb") as pickle_file:
         reduced = pk.load(pickle_file)
     return pheno_NMF, reduced
 
 
-def symbol_to_id_to_dict():
+def symbol_to_id_to_dict(resource_dir):
     # from NCBI
-    ncbi_df = pd.read_csv(f"{RESOURCE_DIR_PATH}/Homo_sapiens.gene_info.gz", sep="\t")
+    ncbi_df = pd.read_csv(f"{resource_dir}/Homo_sapiens.gene_info.gz", sep="\t")
     ncbi_df = ncbi_df[ncbi_df["#tax_id"] == 9606]
     ncbi_df_ncbi = ncbi_df.set_index("Symbol")
     ncbi_to_dict_ncbi = ncbi_df_ncbi["GeneID"].to_dict()
@@ -104,14 +104,14 @@ def symbol_to_id_to_dict():
     return ncbi_to_dict_ncbi, ncbi_to_dict
 
 
-def load_similarity_dict():
-    with open(f"{RESOURCE_DIR_PATH}/similarity_dict_threshold_80_2024.json") as json_data:
+def load_similarity_dict(resource_dir):
+    with open(f"{resource_dir}/similarity_dict_threshold_80_2024.json") as json_data:
         data_dict = json.load(json_data)
     return data_dict
 
 
-def load_hp_ontology():
-    with open(f"{RESOURCE_DIR_PATH}/hpo_obo_2024.json") as json_data:
+def load_hp_ontology(resource_dir):
+    with open(f"{resource_dir}/hpo_obo_2024.json") as json_data:
         data_dict = json.load(json_data)
     return data_dict
 
@@ -214,12 +214,17 @@ def add_hpo_description_implicated(x, annot_dict):
     default=None,
     help="(Optional) List of genes in NCBI ID format to match, separated with commas",
 )
-def evaluate_matching(result_file, hpo_list, gene_list):
+@click.option(
+    "--resource_dir",
+    default=os.path.join(PACKAGE_DIR_PATH, "data", "resources"),
+    help="(Optional) Path to resources directory, default = data/resources/",
+)
+def evaluate_matching(result_file, hpo_list, gene_list, resource_dir):
     logging.info("INFO: load databases")
-    ncbi, symbol = symbol_to_id_to_dict()
-    data = load_data()
-    hp_onto = load_hp_ontology()
-    obo_loaded = load_obo()
+    ncbi, symbol = symbol_to_id_to_dict(resource_dir)
+    data = load_data(resource_dir)
+    hp_onto = load_hp_ontology(resource_dir)
+    obo_loaded = load_obo(resource_dir)
 
     logging.info("INFO: clean HPO list")
     if hpo_list is None:
@@ -251,7 +256,7 @@ def evaluate_matching(result_file, hpo_list, gene_list):
         if len(hpo_list) < 6:
             logging.info("INFO: selected symptom interaction model - NMF")
             pandarallel.initialize(nb_workers=4)
-            pheno_NMF, reduced = load_nmf_model()
+            pheno_NMF, reduced = load_nmf_model(resource_dir)
             witness = np.zeros(len(data.columns))
             witness_nmf = np.matmul(pheno_NMF.components_, witness)
             witness_df = (

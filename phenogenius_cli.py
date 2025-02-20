@@ -311,7 +311,7 @@ def evaluate_matching(result_file, hpo_list, gene_list, resource_dir):
 
         else:
             logging.info("INFO: selected symptom interaction model - node similarity")
-            similarity_terms_dict = load_similarity_dict()
+            similarity_terms_dict = load_similarity_dict(resource_dir)
             sim_dict, hpo_list_add_raw = get_similar_terms(
                 hpo_list, similarity_terms_dict
             )

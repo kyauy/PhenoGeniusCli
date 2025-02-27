@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "PhenoGenius_cli"
-version = "1.1.2"
+version = "1.1.3"
 description = ""
 authors = ["kevin.yauy <kevin.yauy@chu-montpellier.fr>"]
 

@@ -15,7 +15,7 @@ click = "^8.1.7"
 pyarrow = "^17.0.0"
 pronto = "^2.5.8"
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.dev.dependencies]
 pytest = "^5.2"
 
 [build-system]

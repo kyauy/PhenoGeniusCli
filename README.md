@@ -25,6 +25,7 @@ poetry #(https://python-poetry.org/docs/#installation)
 - Install dependencies
 
 ```bash
+poetry env use 3.11
 poetry install
 ```
 
@@ -33,9 +34,10 @@ poetry install
 ### Run
 
 ```bash
-poetry shell
-python phenogenius_cli.py --hpo_list HP:0000107,HP:0000108,HP:0001407,HP:0005562 --result_file PKD1.tsv
+poetry env activate
+poetry run python phenogenius_cli.py --hpo_list HP:0000107,HP:0000108,HP:0001407,HP:0005562 --result_file PKD1.tsv
 ```
+
 ```
 Usage: phenogenius_cli.py [OPTIONS]
 
@@ -65,7 +67,6 @@ Options:
 |                               | C - Limited association, not highly specific or with high genetic heterogeneity                                           |
 |                               | D - Not consistent with what is expected for the gene/genomic region or not consistent in general                         |
 
-
 ## Explore interactive graphs of symptoms interactions
 
 ### Human Phenotype Ontology
@@ -91,5 +92,3 @@ Enjoy !
 [![SeqOne](data/img/logo-seqone.png)](https://seqone.com/)
 
 [![Université Grenoble Alpes](data/img/logo-uga.png)](https://iab.univ-grenoble-alpes.fr/)
-
-

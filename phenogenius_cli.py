@@ -52,37 +52,67 @@ def load_obo(resource_dir):
 
 def get_updated_hpo_term_list(hpo_list, obo_loaded):
     """
-    Get a list with updated terms (as some HPO terms could become obsolete and be replaced)
+    For each HPO term, return an (original, updated) tuple. Some HPO terms become
+    obsolete and are replaced: `updated` is then the replacement term, while
+    `original` is kept so the caller can fall back to it if the replacement is
+    absent from the matrix. For non-obsolete terms (or obsolete terms with no
+    declared replacement), `updated` equals `original`.
     """
-    hpo_2_list_updated = []
+    hpo_pairs = []
     try:
         for term in hpo_list:
             if term == "HP:0000000":
-                pass
-            elif obo_loaded[term].obsolete:
-                # if term is obsolete, first get the replace_by term
-                if len(obo_loaded[term].replaced_by) != 1:
-                    # if no replace_by terms is declared, get the consider term
-                    if len(obo_loaded[term].consider) == 1:
-                        term_deepcopy = copy.deepcopy(obo_loaded[term].consider)
-                        term_updated = term_deepcopy.pop().id
-                    else:
-                        # if no consider terms is reported, go check if this term is an alternate id of one HPO in ontology
-                        for hpo in obo_loaded.terms():
-                            if term in hpo.alternate_ids:
-                                term_updated = hpo.id
-                                hpo_2_list_updated.append(term_updated)
-                else:
+                continue
+            if obo_loaded[term].obsolete:
+                # if term is obsolete, first get the replaced_by term
+                term_updated = None
+                if len(obo_loaded[term].replaced_by) == 1:
                     term_deepcopy = copy.deepcopy(obo_loaded[term].replaced_by)
                     term_updated = term_deepcopy.pop().id
-                    hpo_2_list_updated.append(term_updated)
-                print(f"{term} is obsolete, replaced by {term_updated}")
+                # if no replaced_by term is declared, get the consider term
+                elif len(obo_loaded[term].consider) == 1:
+                    term_deepcopy = copy.deepcopy(obo_loaded[term].consider)
+                    term_updated = term_deepcopy.pop().id
+                else:
+                    # else check if this term is an alternate id of one HPO in ontology
+                    for hpo in obo_loaded.terms():
+                        if term in hpo.alternate_ids:
+                            term_updated = hpo.id
+                            break
+                if term_updated is None:
+                    print(f"{term} is obsolete with no replacement declared")
+                    hpo_pairs.append((term, term))
+                else:
+                    print(f"{term} is obsolete, replaced by {term_updated}")
+                    hpo_pairs.append((term, term_updated))
             else:
-                hpo_2_list_updated.append(term)
-    except:
+                hpo_pairs.append((term, term))
+    except Exception:
         print(hpo_list)
 
-    return hpo_2_list_updated
+    return hpo_pairs
+
+
+def get_hpo_in_matrix(data, hp_onto, hpo):
+    """
+    Return the closest informative HPO term for matching: the term itself if it
+    is an informative column of the matrix (present and not all-zero), otherwise
+    the closest ancestor that is. Some terms exist in the ontology but not in the
+    gene-association matrix (e.g. terms with no gene association), and indexing
+    the matrix with a missing term raises a KeyError, so membership is checked
+    before indexing. Return None if no informative ancestor is found.
+    """
+    term = hpo
+    visited = set()
+    while term not in ["HP:0000001"] and term not in visited:
+        visited.add(term)
+        if term in data.columns and data[term].astype(bool).sum(axis=0) != 0:
+            return term
+        parents = hp_onto.get(term, {}).get("direct_parent")
+        if not parents:
+            return None
+        term = parents[0]
+    return None
 
 
 def load_nmf_model(resource_dir):
@@ -176,7 +206,10 @@ def get_hpo_implicated_dict(data, hpo_list, hp_onto):
         for k, v in value.items():
             if v > 0:
                 hpo_implicated.append({k: round(v, 1)})
-                hpo_description_implicated.append({hp_onto[k]["name"]: round(v, 1)})
+                # obsolete terms can be matrix columns without being in hp_onto,
+                # fall back to the HPO id as label in that case
+                hpo_name = hp_onto[k]["name"] if k in hp_onto else k
+                hpo_description_implicated.append({hpo_name: round(v, 1)})
 
         annot_dict[key] = {
             "hpo_implicated": hpo_implicated,
@@ -231,25 +264,47 @@ def evaluate_matching(result_file, hpo_list, gene_list, resource_dir):
         print("Provide a list of HPO terms with the --hpo_list option")
     else:
         hpo_list_ini = hpo_list.strip().split(",")
-        hpo_list_updated = get_updated_hpo_term_list(hpo_list_ini, obo_loaded)
+        hpo_pairs = get_updated_hpo_term_list(hpo_list_ini, obo_loaded)
         hpo_list_up = []
-        for hpo in hpo_list_updated:
-            if hpo in ["HP:0000001"]:
-                pass
+        for original, updated in hpo_pairs:
+            if updated in ["HP:0000001"]:
+                continue
+            # 1. the updated term is directly usable in the matrix
+            if updated in data.columns and data[updated].astype(bool).sum(axis=0) != 0:
+                hpo_list_up.append(updated)
+            # 2. the updated term is absent but the obsolete original term is in the matrix
+            elif (
+                original != updated
+                and original in data.columns
+                and data[original].astype(bool).sum(axis=0) != 0
+            ):
+                print(
+                    f"INFO: {updated} is absent from the matrix, "
+                    f"reverting to obsolete term {original} present in the database"
+                )
+                hpo_list_up.append(original)
             else:
-                if data[hpo].astype(bool).sum(axis=0) != 0:
-                    hpo_list_up.append(hpo)
+                # 3. inference: climb to the closest informative ancestor
+                ancestor = get_hpo_in_matrix(data, hp_onto, updated)
+                if ancestor is None:
+                    print(
+                        f"WARNING: {original} and its ancestors are absent from the "
+                        "database, term ignored"
+                    )
                 else:
-                    hpo_to_test = hp_onto[hpo]["direct_parent"][0]
-                    while data[hpo_to_test].astype(bool).sum(
-                        axis=0
-                    ) == 0 and hpo_to_test not in ["HP:0000001"]:
-                        hpo_to_test = hp_onto[hpo_to_test]["direct_parent"][0]
-                    if hpo_to_test in ["HP:0000001"]:
-                        pass
-                    else:
-                        hpo_list_up.append(hpo_to_test)
+                    print(
+                        f"INFO: {updated} is not informative in the matrix, "
+                        f"replaced by closest informative ancestor {ancestor}"
+                    )
+                    hpo_list_up.append(ancestor)
         hpo_list = list(set(hpo_list_up))
+
+        if not hpo_list:
+            print(
+                "ERROR: none of the provided HPO terms could be matched in the "
+                "matrix, no result file produced"
+            )
+            return
 
         annot_dict = get_hpo_implicated_dict(data, hpo_list, hp_onto)
 

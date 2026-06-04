@@ -12,7 +12,7 @@ numpy = ">=1.24,<2.1"
 scikit-learn = "^1.5.1"
 pandarallel = "^1.6.5"
 click = "^8.1.7"
-pyarrow = "^17.0.0"
+pyarrow = ">=17.0.0"
 pronto = "^2.5.8"
 
 [tool.poetry.group.dev.dependencies]
